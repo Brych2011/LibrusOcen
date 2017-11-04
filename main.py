@@ -1,9 +1,9 @@
 from bs4 import BeautifulSoup
-
+#Just a test to check integration with pycharm
 
 MARK_VALUES = {'1':1, '1+':1.5, '2-':1.75, '2':2, '2+':2.5, '3-':2.75, '3':3, '3+':3.5,
                '4-':3.75, '4':4, '4+':4.5, '5-':4.75, '5':5, '5+':5.5, '6-':5.75, '6':6,
-               'np':'np', '+':'+', '0':'0', '-':'-'}
+               'np':'np', '+':'+', '0':'0', '-': '-'}
 
 
 def parse_marks(bs_object):
@@ -22,7 +22,7 @@ def parse_marks(bs_object):
 
 
 def parse_subject(foo):
-    parts = foo.find_all(name='td', recursive = False)
+    parts = foo.find_all(name='td', recursive=False)
     length = len(parts)
     name = parts[1].text
 

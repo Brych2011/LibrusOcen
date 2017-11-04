@@ -1,87 +1,100 @@
 from bs4 import BeautifulSoup
+import re
+import requests
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 
 
-MARK_VALUES = {'1':1, '1+':1.5, '2-':1.75, '2':2, '2+':2.5, '3-':2.75, '3':3, '3+':3.5,
-               '4-':3.75, '4':4, '4+':4.5, '5-':4.75, '5':5, '5+':5.5, '6-':5.75, '6':6,
-               'np':'np', '+':'+', '0':'0', '-':'-'}
+def convertToSeconds(time):
+    return ((int(time[0])*60+(int(time[2])*10)+int(time[3])+(int(time[5])*0.1)))
+def deleteContent(pfile):
+    """this part clears the temporary file that holds all of the text"""
 
-
-def parse_marks(bs_object):
-    marks = bs_object.find_all('a')
-    results = []
-    for i in marks:
-        mark_data = {}
-        data = i.attrs['title'].strip('<br/>').split('<br>')
-        for j in data:
-            semicolon_idex = j.find(':')
-            mark_data[j[0 : semicolon_idex]] = j[semicolon_idex+2:]
-        mark_data['intOcena'] = MARK_VALUES[i.text]
-        results.append(mark_data)
-    return results
+    pfile.seek(0)
+    pfile.truncate()
 
 
 
-def parse_subject(foo):
-    parts = foo.find_all(name='td', recursive = False)
-    length = len(parts)
-    name = parts[1].text
+timesInSeconds = []
+page = []
+soup = []
+masterText = open("TextFiles/masterText.txt", "w")
+expression = re.compile("[0-9]:[0-9][0-9].[0-9]\n")
+deleteContent(masterText)
+""" This section downloads the data from each webpage and adds its text to the file"""
+for x in range(1, 4):
+    num = str(x)
+    page.append(requests.get('https://log.concept2.com/rankings/2017/rower/2000?gender=M&status=race&page='+str(x)))
+    soup.append(BeautifulSoup(page[x-1].content,"lxml"))
+    masterText.write(soup[x-1].text)
+    print(soup[x-1].text)
+"""this section close the file and repens it for read"""
 
-    if parts[2].text == 'Brak ocen':
-        marks1 = None
-        average = None
-    else:
-        marks1 = parse_marks(parts[2])
-        average = parts[3].text
+masterText.close()
 
-    if parts[4].text == ' - ':
-        semestral = None
-    else:
-        semestral = parts[4].text
+regRead =  open("TextFiles/masterText.txt", "r")
 
-    if parts[5].text == 'Brak ocen':
-        marks2 = None
-        average2 = None
-        yearly_average = None
-    else:
-        marks2 = parse_marks(parts[5])
-        average2 = parts[6].text
-        yearly_average = parts[8].text
+linesInFile = regRead.readlines()
 
-
-    if parts[7].text == ' - ':
-        semestral2 = None
-    else:
-        semestral2 = parts[7].text
-
-
-    if parts[9].text == ' - ':
-        final_mark = None
-    else:
-        final_mark = parts[9].text
-
-    return name, marks1, average, semestral, marks2, average2, semestral2, yearly_average, final_mark
-
-
-def get_marks_table(bs_page):
-    """extraxts the table with marks from librus' source file"""
-    stage1 = bs_page.find(name='div', id='body')
-    return stage1.find_all(name = 'table', class_ = 'decorated stretch')[1]         #TODO make it look more... appealing
-
-
-page = open("librushtml.html", 'r')
-parsed_page = BeautifulSoup(page, "html.parser")
-
-table = get_marks_table(parsed_page)
-marks_part = table.find('tbody')
-subject_list = []
-for i in marks_part.find_all(name='tr', recursive=False):   #finds all <tr>'s responsible for grades
-    if not 'style' in i.attrs.keys ():                      #TODO get rid of class="bolded line1" at the end
-        try:
-            subject_list.append(parse_subject(i))
-        except Exception as e:
-            print(repr(e))
-
-print(subject_list)
+#these are the datapoints a want to collect
+times = []
+sportsMen = []
+age = []
 
 
 
+"""checks every line of the file for the pattern of the time and also removes the averege and the split times form the data set"""
+for line in linesInFile[10:-10]:
+    if re.match(expression, line):
+        if re.match(expression, linesInFile[linesInFile.index(line)-1]) == None and re.match(expression, linesInFile[linesInFile.index(line)+1]) == None and len(linesInFile[linesInFile.index(line)+4]) <3 : #do not touch
+            sportsMen.append(linesInFile[linesInFile.index(line)-5].strip()) # pulls the names of athletes and strips the \n from it and adds it to the list
+            age.append(int(linesInFile[linesInFile.index(line) - 4].strip()))
+            times.append(line) # adds the time to the list
+
+
+print(times)
+
+"""here it converts the ugly string to a pretty int in seconds"""
+for x in times:
+    temp = convertToSeconds(x)
+
+    timesInSeconds.append(temp)
+
+
+
+"""all numpy arrays from here"""
+
+npTimes = np.array(timesInSeconds)
+npAthletes = np.array(sportsMen)
+npAge = np.array(age)
+
+
+"""plotting section, here it will present the data that was downloaded on the end of the program"""
+
+
+print(timesInSeconds)
+"""plots the data here"""
+
+
+
+
+
+print(sportsMen)
+plt.plot(range(len(timesInSeconds)),timesInSeconds)
+
+
+
+
+#pandas dataframe setup
+tempNp = np.array([npTimes, npAge])
+#mainframe = pd.DataFrame(data = tempNp, index = npAthletes)
+
+#print(mainframe.describe())
+
+
+
+plt.show()
+
+
+#print(mainframe['Rolandas Mascinskas'])
